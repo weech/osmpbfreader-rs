@@ -118,7 +118,7 @@ impl<'a> Iterator for DenseInfoIter<'a> {
             self.cur_changeset += di.changeset[self.place];
             self.cur_uid += di.uid[self.place];
             self.cur_user_sid += di.user_sid[self.place];
-            let visible = di.visible[self.place];
+            let visible = di.visible.get(self.place).unwrap_or(&true);
             self.place += 1;
             Some(Info {
                 version: Some(version),
@@ -126,7 +126,7 @@ impl<'a> Iterator for DenseInfoIter<'a> {
                 changeset: Some(self.cur_changeset),
                 uid: Some(self.cur_uid),
                 user: Some(make_string(self.cur_user_sid as usize, self.block)),
-                visible: Some(visible),
+                visible: Some(*visible),
             })
         } else {
             Some(Info {
