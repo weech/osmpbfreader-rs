@@ -59,10 +59,80 @@ impl<'a> Iterator for SimpleNodes<'a> {
             decimicro_lat: make_lat(n.get_lat(), self.block),
             decimicro_lon: make_lon(n.get_lon(), self.block),
             tags: make_tags(n.get_keys(), n.get_vals(), self.block),
+            info: if n.has_info() {
+                make_info(n.get_info())
+            } else {
+                Info {
+                    version: None,
+                    timestamp: None,
+                    changeset: None,
+                    uid: None,
+                    user_sid: None,
+                    visible: None,
+                }
+            },
         })
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
+    }
+}
+
+struct DenseInfoIter<'a> {
+    denseinfo: &'a protobuf::SingularPtrField<osmformat::DenseInfo>,
+    cur_timestamp: i64,
+    cur_changeset: i64,
+    cur_uid: i32,
+    cur_user_sid: i32,
+    place: usize,
+}
+
+impl<'a> DenseInfoIter<'a> {
+    fn new(denseinfo: &'a protobuf::SingularPtrField<osmformat::DenseInfo>) -> Self {
+        Self {
+            denseinfo,
+            cur_timestamp: 0,
+            cur_changeset: 0,
+            cur_uid: 0,
+            cur_user_sid: 0,
+            place: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for DenseInfoIter<'a> {
+    type Item = Info;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.denseinfo.is_some() {
+            let di = self.denseinfo.get_ref();
+            if self.place == di.version.len() {
+                return None;
+            }
+            let version = di.version[self.place];
+            self.cur_timestamp += di.timestamp[self.place];
+            self.cur_changeset += di.changeset[self.place];
+            self.cur_uid += di.uid[self.place];
+            self.cur_user_sid += di.user_sid[self.place];
+            let visible = di.visible[self.place];
+            self.place += 1;
+            Some(Info {
+                version: Some(version),
+                timestamp: Some(self.cur_timestamp),
+                changeset: Some(self.cur_changeset),
+                uid: Some(self.cur_uid),
+                user_sid: Some(self.cur_user_sid as u32),
+                visible: Some(visible),
+            })
+        } else {
+            Some(Info {
+                version: None,
+                timestamp: None,
+                changeset: None,
+                uid: None,
+                user_sid: None,
+                visible: None,
+            })
+        }
     }
 }
 
@@ -77,6 +147,7 @@ pub fn dense_nodes<'a>(group: &'a PrimitiveGroup, block: &'a PrimitiveBlock) -> 
         cur_id: 0,
         cur_lat: 0,
         cur_lon: 0,
+        denseinfo: DenseInfoIter::new(&dense.denseinfo),
     }
 }
 
@@ -89,19 +160,26 @@ pub struct DenseNodes<'a> {
     cur_id: i64,
     cur_lat: i64,
     cur_lon: i64,
+    denseinfo: DenseInfoIter<'a>,
 }
 
 impl<'a> Iterator for DenseNodes<'a> {
     type Item = Node;
     fn next(&mut self) -> Option<Node> {
-        match (self.dids.next(), self.dlats.next(), self.dlons.next()) {
-            (Some(&did), Some(&dlat), Some(&dlon)) => {
+        let info = match (
+            self.dids.next(),
+            self.dlats.next(),
+            self.dlons.next(),
+            self.denseinfo.next(),
+        ) {
+            (Some(&did), Some(&dlat), Some(&dlon), Some(info)) => {
                 self.cur_id += did;
                 self.cur_lat += dlat;
                 self.cur_lon += dlon;
+                info
             }
             _ => return None,
-        }
+        };
         let mut tags = Tags::new();
         loop {
             let k = match self.keys_vals.next() {
@@ -120,6 +198,7 @@ impl<'a> Iterator for DenseNodes<'a> {
             decimicro_lat: make_lat(self.cur_lat, self.block),
             decimicro_lon: make_lon(self.cur_lon, self.block),
             tags: tags,
+            info,
         })
     }
 }
@@ -153,6 +232,18 @@ impl<'a> Iterator for Ways<'a> {
                 id: WayId(w.get_id()),
                 nodes: nodes,
                 tags: make_tags(w.get_keys(), w.get_vals(), self.block),
+                info: if w.has_info() {
+                    make_info(w.get_info())
+                } else {
+                    Info {
+                        version: None,
+                        timestamp: None,
+                        changeset: None,
+                        uid: None,
+                        user_sid: None,
+                        visible: None,
+                    }
+                },
             }
         })
     }
@@ -199,6 +290,18 @@ impl<'a> Iterator for Relations<'a> {
                 id: RelationId(rel.get_id()),
                 refs: refs,
                 tags: make_tags(rel.get_keys(), rel.get_vals(), self.block),
+                info: if rel.has_info() {
+                    make_info(rel.get_info())
+                } else {
+                    Info {
+                        version: None,
+                        timestamp: None,
+                        changeset: None,
+                        uid: None,
+                        user_sid: None,
+                        visible: None,
+                    }
+                },
             }
         })
     }
@@ -233,4 +336,41 @@ fn make_tags(keys: &[u32], vals: &[u32], b: &PrimitiveBlock) -> Tags {
         .collect();
     tags.shrink_to_fit();
     tags
+}
+
+fn make_info(i: &osmformat::Info) -> Info {
+    let version = if i.has_version() {
+        Some(i.get_version())
+    } else {
+        None
+    };
+    let timestamp = if i.has_timestamp() {
+        Some(i.get_timestamp())
+    } else {
+        None
+    };
+    let changeset = if i.has_changeset() {
+        Some(i.get_changeset())
+    } else {
+        None
+    };
+    let uid = if i.has_uid() { Some(i.get_uid()) } else { None };
+    let user_sid = if i.has_user_sid() {
+        Some(i.get_user_sid())
+    } else {
+        None
+    };
+    let visible = if i.has_visible() {
+        Some(i.get_visible())
+    } else {
+        None
+    };
+    Info {
+        version,
+        timestamp,
+        changeset,
+        uid,
+        user_sid,
+        visible,
+    }
 }

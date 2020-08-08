@@ -51,6 +51,17 @@ impl FromIterator<(String, String)> for Tags {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Serialize, Deserialize)]
+pub(crate) struct Info {
+    // message fields
+    pub(crate) version: Option<i32>,
+    pub(crate) timestamp: Option<i64>,
+    pub(crate) changeset: Option<i64>,
+    pub(crate) uid: Option<i32>,
+    pub(crate) user_sid: Option<u32>,
+    pub(crate) visible: Option<bool>,
+}
+
 /// A node identifier
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Copy, Serialize, Deserialize)]
 pub struct NodeId(pub i64);
@@ -138,6 +149,14 @@ impl OsmObj {
             OsmObj::Relation(ref rel) => &rel.tags,
         }
     }
+    /// Returns the version of the object, if available
+    pub fn version(&self) -> Option<i32> {
+        match *self {
+            OsmObj::Node(ref node) => node.version(),
+            OsmObj::Way(ref way) => way.version(),
+            OsmObj::Relation(ref rel) => rel.version(),
+        }
+    }
     /// Returns the id of the object.
     pub fn id(&self) -> OsmId {
         match *self {
@@ -194,6 +213,8 @@ pub struct Node {
     pub decimicro_lat: i32,
     /// The longitude in decimicro degrees (10⁻⁷ degrees).
     pub decimicro_lon: i32,
+    /// The optional info
+    pub(crate) info: Info,
 }
 
 impl Node {
@@ -204,6 +225,10 @@ impl Node {
     /// Returns the longitude of the node in degrees.
     pub fn lon(&self) -> f64 {
         self.decimicro_lon as f64 * 1e-7
+    }
+    /// Returns the version of the object, if available
+    pub fn version(&self) -> Option<i32> {
+        self.info.version
     }
 }
 
@@ -218,6 +243,8 @@ pub struct Way {
     pub tags: Tags,
     /// The ordered list of nodes as id.
     pub nodes: Vec<NodeId>,
+    /// The optional info
+    pub(crate) info: Info,
 }
 
 impl Way {
@@ -230,6 +257,10 @@ impl Way {
     /// [closed](http://wiki.openstreetmap.org/wiki/Way#Closed_way).
     pub fn is_closed(&self) -> bool {
         self.nodes.first() == self.nodes.last()
+    }
+    /// Returns the version of the object, if available
+    pub fn version(&self) -> Option<i32> {
+        self.info.version
     }
 }
 
@@ -253,6 +284,15 @@ pub struct Relation {
     pub tags: Tags,
     /// Members of the relation.
     pub refs: Vec<Ref>,
+    /// The optional info
+    pub(crate) info: Info,
+}
+
+impl Relation {
+    /// Returns the version of the object, if available
+    pub fn version(&self) -> Option<i32> {
+        self.info.version
+    }
 }
 
 impl ::std::convert::From<NodeId> for OsmId {
