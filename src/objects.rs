@@ -58,7 +58,7 @@ pub(crate) struct Info {
     pub(crate) timestamp: Option<i64>,
     pub(crate) changeset: Option<i64>,
     pub(crate) uid: Option<i32>,
-    pub(crate) user_sid: Option<u32>,
+    pub(crate) user: Option<String>,
     pub(crate) visible: Option<bool>,
 }
 
@@ -157,6 +157,14 @@ impl OsmObj {
             OsmObj::Relation(ref rel) => rel.version(),
         }
     }
+    /// Returns the username of the last user to edit the object, if available
+    pub fn user(&self) -> &Option<String> {
+        match *self {
+            OsmObj::Node(ref node) => node.user(),
+            OsmObj::Way(ref way) => way.user(),
+            OsmObj::Relation(ref rel) => rel.user(),
+        }
+    }
     /// Returns the id of the object.
     pub fn id(&self) -> OsmId {
         match *self {
@@ -230,6 +238,10 @@ impl Node {
     pub fn version(&self) -> Option<i32> {
         self.info.version
     }
+    /// Returns the username of the last user to edit the object, if available
+    pub fn user(&self) -> &Option<String> {
+        &self.info.user
+    }
 }
 
 /// An OpenStreetMap way.  See the [OpenStreetMap wiki page about
@@ -262,6 +274,10 @@ impl Way {
     pub fn version(&self) -> Option<i32> {
         self.info.version
     }
+    /// Returns the username of the last user to edit the object, if available
+    pub fn user(&self) -> &Option<String> {
+        &self.info.user
+    }
 }
 
 /// A reference to an object with a role.  Used in the relation object.
@@ -292,6 +308,10 @@ impl Relation {
     /// Returns the version of the object, if available
     pub fn version(&self) -> Option<i32> {
         self.info.version
+    }
+    /// Returns the username of the last user to edit the object, if available
+    pub fn user(&self) -> &Option<String> {
+        &self.info.user
     }
 }
 

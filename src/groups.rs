@@ -60,14 +60,14 @@ impl<'a> Iterator for SimpleNodes<'a> {
             decimicro_lon: make_lon(n.get_lon(), self.block),
             tags: make_tags(n.get_keys(), n.get_vals(), self.block),
             info: if n.has_info() {
-                make_info(n.get_info())
+                make_info(n.get_info(), self.block)
             } else {
                 Info {
                     version: None,
                     timestamp: None,
                     changeset: None,
                     uid: None,
-                    user_sid: None,
+                    user: None,
                     visible: None,
                 }
             },
@@ -80,6 +80,7 @@ impl<'a> Iterator for SimpleNodes<'a> {
 
 struct DenseInfoIter<'a> {
     denseinfo: &'a protobuf::SingularPtrField<osmformat::DenseInfo>,
+    block: &'a osmformat::PrimitiveBlock,
     cur_timestamp: i64,
     cur_changeset: i64,
     cur_uid: i32,
@@ -88,9 +89,13 @@ struct DenseInfoIter<'a> {
 }
 
 impl<'a> DenseInfoIter<'a> {
-    fn new(denseinfo: &'a protobuf::SingularPtrField<osmformat::DenseInfo>) -> Self {
+    fn new(
+        denseinfo: &'a protobuf::SingularPtrField<osmformat::DenseInfo>,
+        block: &'a osmformat::PrimitiveBlock,
+    ) -> Self {
         Self {
             denseinfo,
+            block,
             cur_timestamp: 0,
             cur_changeset: 0,
             cur_uid: 0,
@@ -120,7 +125,7 @@ impl<'a> Iterator for DenseInfoIter<'a> {
                 timestamp: Some(self.cur_timestamp),
                 changeset: Some(self.cur_changeset),
                 uid: Some(self.cur_uid),
-                user_sid: Some(self.cur_user_sid as u32),
+                user: Some(make_string(self.cur_user_sid as usize, self.block)),
                 visible: Some(visible),
             })
         } else {
@@ -129,7 +134,7 @@ impl<'a> Iterator for DenseInfoIter<'a> {
                 timestamp: None,
                 changeset: None,
                 uid: None,
-                user_sid: None,
+                user: None,
                 visible: None,
             })
         }
@@ -147,7 +152,7 @@ pub fn dense_nodes<'a>(group: &'a PrimitiveGroup, block: &'a PrimitiveBlock) -> 
         cur_id: 0,
         cur_lat: 0,
         cur_lon: 0,
-        denseinfo: DenseInfoIter::new(&dense.denseinfo),
+        denseinfo: DenseInfoIter::new(&dense.denseinfo, block),
     }
 }
 
@@ -233,14 +238,14 @@ impl<'a> Iterator for Ways<'a> {
                 nodes: nodes,
                 tags: make_tags(w.get_keys(), w.get_vals(), self.block),
                 info: if w.has_info() {
-                    make_info(w.get_info())
+                    make_info(w.get_info(), self.block)
                 } else {
                     Info {
                         version: None,
                         timestamp: None,
                         changeset: None,
                         uid: None,
-                        user_sid: None,
+                        user: None,
                         visible: None,
                     }
                 },
@@ -291,14 +296,14 @@ impl<'a> Iterator for Relations<'a> {
                 refs: refs,
                 tags: make_tags(rel.get_keys(), rel.get_vals(), self.block),
                 info: if rel.has_info() {
-                    make_info(rel.get_info())
+                    make_info(rel.get_info(), self.block)
                 } else {
                     Info {
                         version: None,
                         timestamp: None,
                         changeset: None,
                         uid: None,
-                        user_sid: None,
+                        user: None,
                         visible: None,
                     }
                 },
@@ -338,7 +343,7 @@ fn make_tags(keys: &[u32], vals: &[u32], b: &PrimitiveBlock) -> Tags {
     tags
 }
 
-fn make_info(i: &osmformat::Info) -> Info {
+fn make_info(i: &osmformat::Info, b: &PrimitiveBlock) -> Info {
     let version = if i.has_version() {
         Some(i.get_version())
     } else {
@@ -355,8 +360,8 @@ fn make_info(i: &osmformat::Info) -> Info {
         None
     };
     let uid = if i.has_uid() { Some(i.get_uid()) } else { None };
-    let user_sid = if i.has_user_sid() {
-        Some(i.get_user_sid())
+    let user = if i.has_user_sid() {
+        Some(make_string(i.get_user_sid() as usize, b))
     } else {
         None
     };
@@ -370,7 +375,7 @@ fn make_info(i: &osmformat::Info) -> Info {
         timestamp,
         changeset,
         uid,
-        user_sid,
+        user,
         visible,
     }
 }
