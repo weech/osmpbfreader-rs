@@ -165,6 +165,38 @@ impl OsmObj {
             OsmObj::Relation(ref rel) => rel.user(),
         }
     }
+    /// Returns the uid of the last user to edit the object if availabe
+    pub fn uid(&self) -> Option<i32> {
+        match *self {
+            OsmObj::Node(ref node) => node.uid(),
+            OsmObj::Way(ref way) => way.uid(),
+            OsmObj::Relation(ref rel) => rel.uid(),
+        }
+    }
+    /// Returns the visibility status of the object if availabe
+    pub fn visible(&self) -> Option<bool> {
+        match *self {
+            OsmObj::Node(ref node) => node.visible(),
+            OsmObj::Way(ref way) => way.visible(),
+            OsmObj::Relation(ref rel) => rel.visible(),
+        }
+    }
+    /// Returns the latest changeset id this object was a part of, if available
+    pub fn changeset(&self) -> Option<i64> {
+        match *self {
+            OsmObj::Node(ref node) => node.changeset(),
+            OsmObj::Way(ref way) => way.changeset(),
+            OsmObj::Relation(ref rel) => rel.changeset(),
+        }
+    }
+    /// Returns the timestamp of the last time this object was edited, if available
+    pub fn timestamp(&self) -> Option<i64> {
+        match *self {
+            OsmObj::Node(ref node) => node.timestamp(),
+            OsmObj::Way(ref way) => way.timestamp(),
+            OsmObj::Relation(ref rel) => rel.timestamp(),
+        }
+    }
     /// Returns the id of the object.
     pub fn id(&self) -> OsmId {
         match *self {
@@ -242,6 +274,22 @@ impl Node {
     pub fn user(&self) -> &Option<String> {
         &self.info.user
     }
+    /// Returns the uid of the last user to edit the object, if available
+    pub fn uid(&self) -> Option<i32> {
+        self.info.uid
+    }
+    /// Returns the visibility status of the object, if available
+    pub fn visible(&self) -> Option<bool> {
+        self.info.visible
+    }
+    /// Returns the latest changeset id this object was a part of, if available
+    pub fn changeset(&self) -> Option<i64> {
+        self.info.changeset
+    }
+    /// Returns the timestamp of the last time this object was edited, if available
+    pub fn timestamp(&self) -> Option<i64> {
+        self.info.timestamp
+    }
 }
 
 /// An OpenStreetMap way.  See the [OpenStreetMap wiki page about
@@ -278,6 +326,22 @@ impl Way {
     pub fn user(&self) -> &Option<String> {
         &self.info.user
     }
+    /// Returns the uid of the last user to edit the object, if available
+    pub fn uid(&self) -> Option<i32> {
+        self.info.uid
+    }
+    /// Returns the visibility status of the object, if available
+    pub fn visible(&self) -> Option<bool> {
+        self.info.visible
+    }
+    /// Returns the latest changeset id this object was a part of, if available
+    pub fn changeset(&self) -> Option<i64> {
+        self.info.changeset
+    }
+    /// Returns the timestamp of the last time this object was edited, if available
+    pub fn timestamp(&self) -> Option<i64> {
+        self.info.timestamp
+    }
 }
 
 /// A reference to an object with a role.  Used in the relation object.
@@ -312,6 +376,22 @@ impl Relation {
     /// Returns the username of the last user to edit the object, if available
     pub fn user(&self) -> &Option<String> {
         &self.info.user
+    }
+    /// Returns the uid of the last user to edit the object, if available
+    pub fn uid(&self) -> Option<i32> {
+        self.info.uid
+    }
+    /// Returns the visibility status of the object, if available
+    pub fn visible(&self) -> Option<bool> {
+        self.info.visible
+    }
+    /// Returns the latest changeset id this object was a part of, if available
+    pub fn changeset(&self) -> Option<i64> {
+        self.info.changeset
+    }
+    /// Returns the timestamp of the last time this object was edited, if available
+    pub fn timestamp(&self) -> Option<i64> {
+        self.info.timestamp
     }
 }
 
